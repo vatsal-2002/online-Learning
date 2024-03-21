@@ -30,7 +30,7 @@ const login = async (req, res) => {
                 const passwordMatch = await bcrypt.compare(password, user.password);
 
                 if (passwordMatch) {
-                    const token = jwt.sign({ id: user.id }, process.env.SECRET_KEY);
+                    const token = jwt.sign({ id: user.id, userType: 'teacher' }, process.env.SECRET_KEY);
                     return res.status(200).json({ message: "Login successful", userType: "teacher", email: user.email, token: token });
                 }
             }
@@ -48,7 +48,7 @@ const login = async (req, res) => {
                     const passwordMatch = await bcrypt.compare(password, user.password);
 
                     if (passwordMatch) {
-                        const token = jwt.sign({ id: user.id }, process.env.SECRET_KEY);
+                        const token = jwt.sign({ id: user.id, userType: 'user' }, process.env.SECRET_KEY);
                         return res.status(200).json({ message: "Login successful", userType: "user", email: user.email, token: token });
                     }
                 }

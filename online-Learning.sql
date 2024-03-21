@@ -2,9 +2,10 @@ CREATE DATABASE `onlineLearning`;
 
 use onlineLearning;
 
+
+
 CREATE TABLE teachers (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    courseId INT UNSIGNED,
     firstName VARCHAR(50) NOT NULL,
     lastName VARCHAR(50) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
@@ -13,18 +14,26 @@ CREATE TABLE teachers (
     skills Enum('html', 'php', 'javascript', 'java'),
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deletedAt TIMESTAMP NULL DEFAULT NULL,
-    FOREIGN KEY (courseId) REFERENCES courses(id)
+    deletedAt TIMESTAMP NULL DEFAULT NULL
 );
+
+alter table teachers
+ADD COLUMN userType varchar(50);
+
+alter table users
+ADD COLUMN userType varchar(50);
+
 
 CREATE TABLE courses (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        teacherId INT UNSIGNED,
     name VARCHAR(50) NOT NULL,
     description VARCHAR(255),
     url VARCHAR(255),
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deletedAt TIMESTAMP NULL DEFAULT NULL
+    deletedAt TIMESTAMP NULL DEFAULT NULL,
+    FOREIGN KEY (teacherId) REFERENCES teachers(id)
 );
 
 
@@ -89,6 +98,8 @@ CREATE TABLE quiz_list(
 );
 
 
+
+
 CREATE TABLE users (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     firstName VARCHAR(50) NOT NULL,
@@ -100,8 +111,6 @@ CREATE TABLE users (
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deletedAt TIMESTAMP NULL DEFAULT NULL
 );
-
-
 CREATE TABLE users_courses (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     userId INT UNSIGNED,

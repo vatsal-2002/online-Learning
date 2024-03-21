@@ -5,6 +5,4 @@ const authMiddleware = require('../middleware/auth');
 
 router.post('/signup', signUp.signUp);
 
-// router.post('/teacher/login', teacher.login);
-
 module.exports = router;

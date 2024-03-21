@@ -66,7 +66,7 @@ const signUp = async (req, res) => {
                 console.log("server error about query", err);
                 return res.status(500).json({ error: "Server Error" });
             }
-            const token = jwt.sign({ id: results.insertId }, process.env.SECRET_KEY, (err, token) => {
+            const token = jwt.sign({ id: results.insertId, userType: userType, signedUp: true }, process.env.SECRET_KEY, (err, token) => {
                 res.header('Authorization', token).status(201).json({ message: "SignUp successful", token: token });
             });
         });

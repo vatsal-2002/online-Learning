@@ -1,15 +1,11 @@
 const jwt = require('jsonwebtoken');
-const db = require('../config/db');
-
 
 const verifyToken = (req, res, next) => {
-    const userToken = req.headers['authorization'];
+    const token = req.headers['authorization'];
 
-    if (!userToken) {
+    if (!token) {
         return res.status(403).json({ error: "Invalid or missing token" });
     }
-
-    const token = userToken;
 
     jwt.verify(token, process.env.SECRET_KEY, (err, authData) => {
         if (err) {
@@ -17,19 +13,18 @@ const verifyToken = (req, res, next) => {
             return res.status(403).json({ error: "Invalid token" });
         }
 
-        // authData has the 'id' property
-        if (!authData || !authData.id) {
-            console.error("Invalid authData:", authData);
-            return res.status(403).json({ error: "Invalid token format" });
+        // Check if userType is 'teacher'
+        if (!authData || !authData.userType || authData.userType !== 'teacher') {
+            console.error("Unauthorized access - userType is not teacher:", authData);
+            return res.status(403).json({ error: "Unauthorized access" });
         }
 
         req.user = authData;
         req.authData = authData;
-        // console.log("Decoded token:", authData);
         next();
     });
 };
 
 module.exports = {
-    verifyToken,
+    verifyToken
 };
