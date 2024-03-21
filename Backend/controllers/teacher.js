@@ -72,7 +72,7 @@ const teacherAllCourses = (req, res) => {
                     courseId: course.courseId,
                     name: course.name,
                     description: course.description,
-                    url: course.urls ? course.urls.split(',') : [] 
+                    url: course.urls ? course.urls.split(',') : []
                 }));
                 res.status(200).json(courses);
             }
@@ -83,15 +83,16 @@ const teacherAllCourses = (req, res) => {
     }
 };
 
+
 const getCourseById = (req, res) => {
     const courseId = req.params.courseId;
     try {
         const selectQuery = `
-            SELECT c.id AS courseId, c.name, c.description, GROUP_CONCAT(u.url) AS urls
+            SELECT c.id AS courseId, c.name, c.description, u.id AS urlListId, u.url
             FROM courses c
             LEFT JOIN urlList u ON c.id = u.courseId
             WHERE c.id = ? AND c.deletedAt IS NULL
-            GROUP BY c.id
+            ORDER BY u.id
         `;
 
         db.query(selectQuery, [courseId], (error, results) => {
@@ -102,12 +103,14 @@ const getCourseById = (req, res) => {
                 if (results.length === 0) {
                     return res.status(404).json({ error: 'Course not found' });
                 }
+
                 const course = {
                     courseId: results[0].courseId,
                     name: results[0].name,
                     description: results[0].description,
-                    url: results[0].urls ? results[0].urls.split(',') : [] // Split URLs into an array
+                    urls: results.map(row => ({ urlId: row.urlListId, url: row.url }))
                 };
+
                 res.status(200).json(course);
             }
         });
@@ -117,9 +120,92 @@ const getCourseById = (req, res) => {
     }
 };
 
+const updateCourseById = (req, res) => {
+    try {
+        const courseId = req.params.courseId;
+        const { name, description } = req.body;
+
+        const updateFields = [];
+        const updateValues = [];
+
+        if (name) {
+            updateFields.push('name = ?');
+            updateValues.push(name);
+        }
+
+        if (description) {
+            updateFields.push('description = ?');
+            updateValues.push(description);
+        }
+
+        const updateQuery = `UPDATE courses SET ${updateFields.join(', ')} WHERE id = ?`;
+        const values = [...updateValues, courseId];
+
+        db.query(updateQuery, values, (error, results) => {
+            if (error) {
+                console.error(error, 'Internal Server Error inside update query');
+                return res.status(500).json({ error: 'Internal Server Error' });
+            }
+
+            if (results.affectedRows === 0) {
+                return res.status(404).json({ error: 'Course not found' });
+            }
+
+            const updatedFields = {};
+            updateFields.forEach((field, index) => {
+                updatedFields[field.split(' ')[0]] = updateValues[index];
+            });
+
+            res.json({
+                message: 'Course details updated successfully',
+                updatedFields
+            });
+        });
+    } catch (err) {
+        console.error('Internal server error about query', err);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+const updateUrlById = (req, res) => {
+    try {
+        const { url } = req.body;
+        const urlId = req.params.urlId;
+
+        // Check if both urlId and url are provided
+        if (!url) {
+            return res.status(400).json({ error: 'URL is required' });
+        }
+
+        // Update the URL in the database
+        const updateQuery = `UPDATE urlList SET url = ? WHERE id = ?`;
+        const values = [url, urlId];
+
+        db.query(updateQuery, values, (error, results) => {
+            if (error) {
+                console.error(error, 'Internal Server Error inside update URL query');
+                return res.status(500).json({ error: 'Internal Server Error' });
+            }
+
+            if (results.affectedRows === 0) {
+                return res.status(404).json({ error: 'URL not found' });
+            }
+
+            res.json({ message: 'URL updated successfully' });
+        });
+    } catch (err) {
+        console.error('Internal server error about URL query', err);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
 
 module.exports = {
     courseUpload,
     teacherAllCourses,
-    getCourseById
+    getCourseById,
+    updateCourseById,
+    updateUrlById
 };
+
+
