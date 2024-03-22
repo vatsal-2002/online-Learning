@@ -24,12 +24,12 @@ alter table users
 ADD COLUMN userType varchar(50);
 
 
+
 CREATE TABLE courses (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         teacherId INT UNSIGNED,
     name VARCHAR(50) NOT NULL,
     description VARCHAR(255),
-    url VARCHAR(255),
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deletedAt TIMESTAMP NULL DEFAULT NULL,
@@ -152,9 +152,8 @@ CREATE TABLE users_quiz (
 );
 
 
-
-
-
+alter table courses
+drop column url ;
 
 
 

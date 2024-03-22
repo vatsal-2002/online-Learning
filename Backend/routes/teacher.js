@@ -8,6 +8,7 @@ router.get('/get/:id', verifyToken, course.teacherAllCourses);
 router.get('/getCourse/:courseId', verifyToken, course.getCourseById);
 router.patch('/updateCourse/:courseId', verifyToken, course.updateCourseById);
 router.patch('/updateUrlById/:urlId', verifyToken, course.updateUrlById);
+router.delete('/delete/:courseId', verifyToken, course.softDeleteCourseById);
 
 
 module.exports = router;

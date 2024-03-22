@@ -200,12 +200,46 @@ const updateUrlById = (req, res) => {
 };
 
 
+const softDeleteCourseById = (req, res) => {
+    try {
+        const courseId = req.params.courseId;
+
+        // Soft delete the course
+        const deleteCourseQuery = `UPDATE courses SET deletedAt = CURRENT_TIMESTAMP() WHERE id = ?`;
+
+        db.query(deleteCourseQuery, [courseId], (error, results) => {
+            if (error) {
+                console.error(error, 'Internal Server Error inside soft delete query');
+                return res.status(500).json({ error: 'Internal Server Error' });
+            }
+
+            if (results.affectedRows === 0) {
+                return res.status(404).json({ error: 'Course not found' });
+            }
+
+            // Soft delete associated URLs for the course
+            const deleteUrlsQuery = `UPDATE urlList SET deletedAt = CURRENT_TIMESTAMP() WHERE courseId = ?`;
+
+            db.query(deleteUrlsQuery, [courseId], (error) => {
+                if (error) {
+                    console.error(error, 'Internal Server Error inside soft delete URLs query');
+                    return res.status(500).json({ error: 'Internal Server Error' });
+                }
+
+                res.json({ message: 'Course and associated URLs soft deleted successfully' });
+            });
+        });
+    } catch (err) {
+        console.error('Internal server error about soft delete query', err);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
 module.exports = {
     courseUpload,
     teacherAllCourses,
     getCourseById,
     updateCourseById,
-    updateUrlById
+    updateUrlById,
+    softDeleteCourseById
 };
-
-
