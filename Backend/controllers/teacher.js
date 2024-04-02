@@ -255,7 +255,7 @@ const createAssignment = (req, res) => {
             }
 
             const assignmentId = results.insertId;
- 
+
             if (questions && questions.length > 0) {
                 const questionValues = questions.map(question => [assignmentId, question.question, question.answer]);
 
@@ -288,6 +288,39 @@ const createAssignment = (req, res) => {
     });
 };
 
+
+const getUsersForCourse = (req, res) => {
+    const courseId = req.params.courseId;
+    try {
+        const selectQuery = `
+            SELECT u.id AS userId, u.email, u.firstName, u.lastName
+            FROM users u
+            INNER JOIN users_courses cu ON u.id = cu.userId
+            WHERE cu.courseId = ?;
+        `;
+
+        db.query(selectQuery, [courseId], (error, results) => {
+            if (error) {
+                console.error(error, 'Internal Server Error inside query');
+                return res.status(500).json({ error: 'Internal Server Error' });
+            } else {
+                const users = results.map(user => ({
+                    userId: user.userId,
+                    firstname: user.firstName,
+                    lastname: user.lastName,
+                    email: user.email
+                }));
+                const userCount = users.length;
+                res.status(200).json({ userCount, users });
+            }
+        });
+    } catch (err) {
+        console.error('Error in getUsersForCourse:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+
 module.exports = {
     courseUpload,
     teacherAllCourses,
@@ -295,5 +328,7 @@ module.exports = {
     updateCourseById,
     updateUrlById,
     softDeleteCourseById,
-    createAssignment
+    createAssignment,
+    getUsersForCourse
+    // getUserCountForCourse
 };
