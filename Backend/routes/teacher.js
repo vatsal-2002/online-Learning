@@ -23,4 +23,12 @@ router.patch('/assignments/updateList/:assignmentListId', verifyToken, authorize
 router.get('/assignments', verifyToken, authorizeTeacher, teacherController.getAllAssignments);
 
 router.get('/assignments/:assignmentId', verifyToken, authorizeTeacher, teacherController.getAssignmentById);
+
+// Delete an assignment by assignment ID (soft delete)
+router.delete('/deleteAssignment/:assignmentId', verifyToken, authorizeTeacher, teacherController.softDeleteAssignmentById);
+
+// Add this line to your existing router definition
+router.get('/userAssignments', verifyToken, authorizeTeacher, teacherController.getAllUserAssignments);
+
+
 module.exports = router;

@@ -504,6 +504,57 @@ const getAssignmentById = (req, res) => {
     }
 };
 
+const softDeleteAssignmentById = (req, res) => {
+    const assignmentId = req.params.assignmentId;
+
+    try {
+        // Soft delete the assignment
+        const softDeleteAssignmentQuery = `UPDATE assignments SET deletedAt = CURRENT_TIMESTAMP() WHERE id = ?`;
+        db.query(softDeleteAssignmentQuery, [assignmentId], (error, assignmentResult) => {
+            if (error) {
+                console.error('Error soft deleting assignment:', error);
+                return res.status(500).json({ error: 'Internal Server Error' });
+            }
+
+            // Soft delete associated questions and answers
+            const softDeleteQuestionsQuery = `UPDATE assignment_list SET deletedAt = CURRENT_TIMESTAMP() WHERE assId = ?`;
+            db.query(softDeleteQuestionsQuery, [assignmentId], (error, questionsResult) => {
+                if (error) {
+                    console.error('Error soft deleting questions:', error);
+                    return res.status(500).json({ error: 'Internal Server Error' });
+                }
+
+                res.status(200).json({ message: 'Assignment and associated questions soft deleted successfully' });
+            });
+        });
+    } catch (err) {
+        console.error('Error in softDeleteAssignmentById:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+const getAllUserAssignments = (req, res) => {
+    try {
+        const selectQuery = `
+            SELECT ua.id, ua.userId, ua.assId, ua.answer, ua.submissionDate, u.firstname, u.lastname, u.email
+            FROM users_assignment ua
+            INNER JOIN users u ON ua.userId = u.id
+        `;
+
+        db.query(selectQuery, (error, results) => {
+            if (error) {
+                console.error('Error fetching user assignments:', error);
+                return res.status(500).json({ error: 'Internal Server Error' });
+            }
+
+            res.status(200).json(results);
+        });
+    } catch (err) {
+        console.error('Error in getAllUserAssignments:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
 
 
 
@@ -519,5 +570,7 @@ module.exports = {
     updateAssignmentById,
     updateAssignmentListById,
     getAllAssignments,
-    getAssignmentById
+    getAssignmentById,
+    softDeleteAssignmentById,
+    getAllUserAssignments
 };

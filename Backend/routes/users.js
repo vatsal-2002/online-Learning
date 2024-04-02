@@ -8,4 +8,13 @@ const { verifyToken, authorizeUser } = require('../middleware/auth');
 router.get('/getAllCourses', verifyToken, authorizeUser, userController.getAllCourses);
 router.get('/getCourse/:courseId', verifyToken, authorizeUser, userController.getCourseById);
 
+// Get all assignments
+router.get('/getAllAssignments', verifyToken, authorizeUser, userController.getAllAssignments);
+
+// Get assignment by ID
+router.get('/getAssignment/:assignmentId', verifyToken, authorizeUser, userController.getAssignmentById);
+
+// Submit assignment detail
+router.post('/submitAssignment', verifyToken, authorizeUser, userController.submitAssignment);
+
 module.exports = router;
