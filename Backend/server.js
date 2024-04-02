@@ -3,8 +3,10 @@ const cors = require('cors');
 const express = require('express');
 const signup = require('./routes/signup');
 const login = require('./routes/login');
-const teacher = require('./routes/teacher')
-const Users = require('./routes/users')
+const teachercourse = require('./routes/teachers/course')
+const teacherassignment = require('./routes/teachers/assignments')
+const Userscourse = require('./routes/users/courses')
+const UsersAssignment = require('./routes/users/assignments')
 const db = require('./config/db');
 
 
@@ -24,8 +26,10 @@ app.use(express.json());
 
 app.use('', signup);
 app.use('', login);
-app.use('/course', teacher);
-app.use('/courses', Users);
+app.use('/course', teachercourse);
+app.use('/course', teacherassignment);
+app.use('/courses', UsersAssignment);
+app.use('/courses', Userscourse);
 
 const PORT = 8000;
 app.listen(PORT, () => {

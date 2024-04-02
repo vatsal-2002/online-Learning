@@ -1,12 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const userController = require('../controllers/users');
-const { verifyToken, authorizeUser } = require('../middleware/auth');
-
-
-// Routes accessible only to users
-router.get('/getAllCourses', verifyToken, authorizeUser, userController.getAllCourses);
-router.get('/getCourse/:courseId', verifyToken, authorizeUser, userController.getCourseById);
+const userController = require('../../controllers/users/assignments');
+const { verifyToken, authorizeUser } = require('../../middleware/auth');
 
 // Get all assignments
 router.get('/getAllAssignments', verifyToken, authorizeUser, userController.getAllAssignments);
