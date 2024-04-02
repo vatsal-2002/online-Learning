@@ -10,5 +10,7 @@ router.patch('/updateCourse/:courseId', verifyToken, authorizeTeacher, teacherCo
 router.patch('/updateUrlById/:urlId', verifyToken, authorizeTeacher, teacherController.updateUrlById);
 router.delete('/delete/:courseId', verifyToken, authorizeTeacher, teacherController.softDeleteCourseById);
 
+router.post('/assignments/create', verifyToken, authorizeTeacher, teacherController.createAssignment);
+
 
 module.exports = router;

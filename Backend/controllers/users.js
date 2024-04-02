@@ -33,6 +33,7 @@ const getAllCourses = (req, res) => {
 const getCourseById = (req, res) => {
     try {
         const courseId = req.params.courseId;
+        const userId = req.user.id;
 
         const selectQuery = `
             SELECT c.id AS courseId, c.name, c.description, GROUP_CONCAT(u.url) AS urls
@@ -57,6 +58,16 @@ const getCourseById = (req, res) => {
                     description: results[0].description,
                     urls: results[0].urls ? results[0].urls.split(',') : []
                 };
+
+                // Store data in users_courses table
+                const insertQuery = `INSERT INTO users_courses (userId, courseId) VALUES (?, ?)`;
+                db.query(insertQuery, [userId, courseId], (error) => {
+                    if (error) {
+                        console.error(error, 'Error inserting data into users_courses table');
+                        return res.status(500).json({ error: 'Internal Server Error' });
+                    }
+                    console.log('Data inserted into users_courses table successfully');
+                });
 
                 res.status(200).json(course);
             }

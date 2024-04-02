@@ -235,11 +235,65 @@ const softDeleteCourseById = (req, res) => {
     }
 };
 
+const createAssignment = (req, res) => {
+    const { name, startDate, endDate, questions } = req.body;
+    const token = req.headers['authorization'];
+
+    jwt.verify(token, process.env.SECRET_KEY, (err, authData) => {
+        if (err) {
+            console.error("Error verifying token:", err);
+            return res.status(403).json({ error: "Invalid token" });
+        }
+
+        const teacherId = authData.id;
+
+        db.query(`INSERT INTO assignments (teacherId, name, startDate, endDate) VALUES (?, ?, ?, ?)`, [teacherId, name, startDate, endDate], (err, results) => {
+            if (err) {
+                console.error('Error creating an assignment', err);
+                res.status(500).json({ error: 'Failed to create assignment' });
+                return;
+            }
+
+            const assignmentId = results.insertId;
+ 
+            if (questions && questions.length > 0) {
+                const questionValues = questions.map(question => [assignmentId, question.question, question.answer]);
+
+                db.query(`INSERT INTO assignment_list (assId, question, answer) VALUES ?`, [questionValues], (err) => {
+                    if (err) {
+                        console.error('Error inserting questions:', err);
+                        res.status(500).json({ error: 'Failed to insert questions' });
+                        return;
+                    }
+                    res.status(201).json({
+                        message: 'Assignment created successfully',
+                        assignmentId: assignmentId,
+                        name: name,
+                        startDate: startDate,
+                        endDate: endDate,
+                        questions: questions
+                    });
+                });
+            } else {
+                res.status(201).json({
+                    message: 'Assignment created successfully',
+                    assignmentId: assignmentId,
+                    name: name,
+                    startDate: startDate,
+                    endDate: endDate,
+                    questions: []
+                });
+            }
+        });
+    });
+};
+
 module.exports = {
     courseUpload,
     teacherAllCourses,
     getCourseById,
     updateCourseById,
     updateUrlById,
-    softDeleteCourseById
+    softDeleteCourseById,
+    createAssignment
 };
