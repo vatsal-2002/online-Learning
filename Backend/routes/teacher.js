@@ -16,6 +16,11 @@ router.get('/usercourse/:courseId/user', verifyToken, authorizeTeacher, teacherC
 // create POST API to create a Assignment for user
 router.post('/assignments/create', verifyToken, authorizeTeacher, teacherController.createAssignment);
 
+router.patch('/assignments/update/:assignmentId', verifyToken, authorizeTeacher, teacherController.updateAssignmentById);
 
+router.patch('/assignments/updateList/:assignmentListId', verifyToken, authorizeTeacher, teacherController.updateAssignmentListById);
 
+router.get('/assignments', verifyToken, authorizeTeacher, teacherController.getAllAssignments);
+
+router.get('/assignments/:assignmentId', verifyToken, authorizeTeacher, teacherController.getAssignmentById);
 module.exports = router;
