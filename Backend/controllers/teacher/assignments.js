@@ -302,7 +302,7 @@ const softDeleteAssignmentById = (req, res) => {
 const getAllUserAssignments = (req, res) => {
     try {
         const selectQuery = `
-            SELECT ua.id, ua.userId, ua.assId, ua.answer, ua.submissionDate, u.firstname, u.lastname, u.email
+            SELECT ua.id, ua.userId, ua.assId, ua.answer, ua.submissionDate, ua.score, u.firstname, u.lastname, u.email
             FROM users_assignment ua
             INNER JOIN users u ON ua.userId = u.id
         `;
