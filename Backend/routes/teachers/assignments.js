@@ -3,9 +3,6 @@ const router = express.Router();
 const teacherController = require('../../controllers/teacher/assignments');
 const { verifyToken, authorizeTeacher } = require('../../middleware/auth');
 
-// Create a get API in which student get the teacher course
-router.get('/usercourse/:courseId/user', verifyToken, authorizeTeacher, teacherController.getUsersForCourse);
-
 // create POST API to create a Assignment for user
 router.post('/assignments/create', verifyToken, authorizeTeacher, teacherController.createAssignment);
 

@@ -9,6 +9,7 @@ router.get('/getCourse/:courseId', verifyToken, authorizeTeacher, teacherControl
 router.patch('/updateCourse/:courseId', verifyToken, authorizeTeacher, teacherController.updateCourseById);
 router.patch('/updateUrlById/:urlId', verifyToken, authorizeTeacher, teacherController.updateUrlById);
 router.delete('/delete/:courseId', verifyToken, authorizeTeacher, teacherController.softDeleteCourseById);
+router.get('/usercourse/:courseId/user', verifyToken, authorizeTeacher, teacherController.getUsersForCourse);
 
 
 module.exports = router;

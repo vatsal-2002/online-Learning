@@ -8,5 +8,7 @@ router.get('/getall', verifyToken, authorizeTeacher, teacherQuizzesController.ge
 router.get('/getdata/:quizId', verifyToken, authorizeTeacher, teacherQuizzesController.getQuizById);
 router.patch('/update/:quizId', verifyToken, authorizeTeacher, teacherQuizzesController.updateQuizById);
 router.patch('/updatequizlist/:quizListId', verifyToken, authorizeTeacher, teacherQuizzesController.updateQuizListItemById);
+router.delete('/deletequizbyid/:quizId', verifyToken, authorizeTeacher, teacherQuizzesController.deleteQuizAndItemsById);
+router.get('/getAllUserQuizzes',verifyToken, authorizeTeacher, teacherQuizzesController.getAllUserQuizzes);
 
 module.exports = router;

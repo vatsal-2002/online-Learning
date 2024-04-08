@@ -229,11 +229,91 @@ const updateQuizListItemById = (req, res) => {
     }
 };
 
+const deleteQuizAndItemsById = (req, res) => {
+    try {
+        const quizId = req.params.quizId;
+
+        // Soft delete query for quiz
+        const softDeleteQuizQuery = `UPDATE quizs SET deletedAt = CURRENT_TIMESTAMP() WHERE id = ?`;
+
+        // Soft delete query for quiz list items
+        const softDeleteQuizListQuery = `UPDATE quiz_list SET deletedAt = CURRENT_TIMESTAMP() WHERE quizId = ?`;
+
+        // Run both queries in a transaction
+        db.beginTransaction(error => {
+            if (error) {
+                console.error('Transaction error:', error);
+                return res.status(500).json({ error: 'Internal Server Error' });
+            }
+
+            db.query(softDeleteQuizQuery, [quizId], (error, results) => {
+                if (error) {
+                    return db.rollback(() => {
+                        console.error(error, 'Error deleting quiz');
+                        return res.status(500).json({ error: 'Internal Server Error' });
+                    });
+                }
+
+                db.query(softDeleteQuizListQuery, [quizId], (error, results) => {
+                    if (error) {
+                        return db.rollback(() => {
+                            console.error(error, 'Error deleting quiz list items');
+                            return res.status(500).json({ error: 'Internal Server Error' });
+                        });
+                    }
+
+                    db.commit(error => {
+                        if (error) {
+                            console.error('Commit error:', error);
+                            return db.rollback(() => {
+                                console.error('Rollback successful');
+                                return res.status(500).json({ error: 'Internal Server Error' });
+                            });
+                        }
+
+                        res.json({
+                            message: 'Quiz and associated items soft deleted successfully'
+                        });
+                    });
+                });
+            });
+        });
+    } catch (err) {
+        console.error('Internal server error about query', err);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+const getAllUserQuizzes = (req, res) => {
+    try {
+        const selectQuery = `
+            SELECT uq.id, uq.userId, uq.quizId, uq.answer, uq.submissionDate, uq.score, u.firstname, u.lastname, u.email
+            FROM users_quiz uq
+            INNER JOIN users u ON uq.userId = u.id
+        `;
+
+        db.query(selectQuery, (error, results) => {
+            if (error) {
+                console.error('Error fetching user quizzes:', error);
+                return res.status(500).json({ error: 'Internal Server Error' });
+            }
+
+            res.status(200).json(results);
+        });
+    } catch (err) {
+        console.error('Error in getAllUserQuizzes:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+
 module.exports = {
     postQuiz,
     getTeacherQuizzes,
     getQuizById,
     updateQuizById,
-    updateQuizListItemById
+    updateQuizListItemById,
+    deleteQuizAndItemsById,
+    getAllUserQuizzes
 };
 

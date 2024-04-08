@@ -8,6 +8,7 @@ const teacherassignment = require('./routes/teachers/assignments')
 const teacherquiz = require('./routes/teachers/quiz')
 const Userscourse = require('./routes/users/courses')
 const UsersAssignment = require('./routes/users/assignments')
+const UsersQuiz = require('./routes/users/quiz')
 const db = require('./config/db');
 
 
@@ -32,6 +33,7 @@ app.use('/course', teacherassignment);
 app.use('/course', teacherquiz);
 app.use('/courses', UsersAssignment);
 app.use('/courses', Userscourse);
+app.use('/courses', UsersQuiz);
 
 const PORT = 8000;
 app.listen(PORT, () => {
