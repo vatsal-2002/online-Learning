@@ -2,8 +2,6 @@ CREATE DATABASE `onlineLearning`;
 
 use onlineLearning;
 
-
-
 CREATE TABLE teachers (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     firstName VARCHAR(50) NOT NULL,
@@ -51,7 +49,6 @@ CREATE TABLE assignments (
 	id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     teacherId INT UNSIGNED,
     name VARCHAR(50) NOT NULL,
-    path VARCHAR(255),
     startDate date,
     endDate date,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -59,6 +56,7 @@ CREATE TABLE assignments (
     deletedAt TIMESTAMP NULL DEFAULT NULL,
     FOREIGN KEY (teacherId) REFERENCES teachers(id)
 );
+
 
 create table assignment_list(
 	id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -97,7 +95,9 @@ CREATE TABLE quiz_list(
     FOREIGN KEY (quizId) REFERENCES quizs(id)
 );
 
+ALTER TABLE quiz_list MODIFY COLUMN options VARCHAR(1000);
 
+ALTER TABLE quiz_list MODIFY COLUMN correct_answer ENUM('A', 'B', 'C', 'D');
 
 
 CREATE TABLE users (
@@ -111,6 +111,7 @@ CREATE TABLE users (
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deletedAt TIMESTAMP NULL DEFAULT NULL
 );
+
 CREATE TABLE users_courses (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     userId INT UNSIGNED,
@@ -136,6 +137,15 @@ CREATE TABLE users_assignment (
     FOREIGN KEY (assId) REFERENCES assignments(id)
 );
 
+ALTER TABLE users_assignment
+ADD COLUMN assignment_listID INT UNSIGNED,
+ADD CONSTRAINT FK_assignment_listID FOREIGN KEY (assignment_listID) REFERENCES assignment_list(id);
+
+
+
+ALTER TABLE users_assignment
+ADD COLUMN score INT UNSIGNED DEFAULT 0;
+
 
 CREATE TABLE users_quiz (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -151,10 +161,18 @@ CREATE TABLE users_quiz (
     FOREIGN KEY (quizId) REFERENCES quizs(id)
 );
 
+ALTER TABLE users_quiz
+ADD COLUMN submissionDate DATE;
+
+ALTER TABLE users_quiz
+ADD COLUMN answer VARCHAR(255); 
+
 
 alter table courses
 drop column url ;
 
+alter table assignments
+drop column path;
 
 
 

@@ -28,7 +28,7 @@ app.use(express.json());
 
 app.use('', signup);
 app.use('', login);
-app.use('/course', teachercourse);
+app.use('', teachercourse);
 app.use('/course', teacherassignment);
 app.use('/course', teacherquiz);
 app.use('/courses', UsersAssignment);

@@ -53,8 +53,10 @@ const courseUpload = async (req, res) => {
 
 
 const teacherAllCourses = (req, res) => {
-    const teacherId = req.params.id;
+    const teacherId = req.params.id; // Extract the teacherId from URL parameter
+
     try {
+        // Define the SQL query to fetch courses for the specified teacher
         const selectQuery = `
             SELECT c.id AS courseId, c.name, c.description, GROUP_CONCAT(u.url) AS urls
             FROM courses c
@@ -63,56 +65,69 @@ const teacherAllCourses = (req, res) => {
             GROUP BY c.id
         `;
 
+        // Execute the SQL query to fetch courses
         db.query(selectQuery, [teacherId], (error, results) => {
             if (error) {
-                console.log(error, 'Internal Server Error inside query');
-                res.status(500).json({ error: 'Internal Server Error' });
-            } else {
-                const courses = results.map(course => ({
-                    courseId: course.courseId,
-                    name: course.name,
-                    description: course.description,
-                    url: course.urls ? course.urls.split(',') : []
-                }));
-                res.status(200).json(courses);
+                console.error(error, 'Internal Server Error inside query');
+                return res.status(500).json({ error: 'Internal Server Error' });
             }
+
+            // If successful, format the results and send them as JSON response
+            const courses = results.map(course => ({
+                courseId: course.courseId,
+                name: course.name,
+                description: course.description,
+                url: course.urls ? course.urls.split(',') : []
+            }));
+            res.status(200).json(courses);
         });
     } catch (err) {
-        console.error('Error in getAllCourses:', err);
+        console.error('Error in teacherAllCourses:', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 
 
 const getCourseById = (req, res) => {
+    const teacherId = req.params.teacherId;
     const courseId = req.params.courseId;
+
     try {
+        // Check if courseId is available
+        if (!courseId) {
+            return res.status(400).json({ error: 'Invalid Course' });
+        }
+
+        // Define the SQL query to fetch the course details
         const selectQuery = `
             SELECT c.id AS courseId, c.name, c.description, u.id AS urlListId, u.url
             FROM courses c
             LEFT JOIN urlList u ON c.id = u.courseId
-            WHERE c.id = ? AND c.deletedAt IS NULL
+            WHERE c.id = ? AND c.teacherId = ? AND c.deletedAt IS NULL
             ORDER BY u.id
         `;
 
-        db.query(selectQuery, [courseId], (error, results) => {
+        // Execute the SQL query to fetch the course details
+        db.query(selectQuery, [courseId, teacherId], (error, results) => {
             if (error) {
-                console.log(error, 'Internal Server Error inside query');
-                res.status(500).json({ error: 'Internal Server Error' });
-            } else {
-                if (results.length === 0) {
-                    return res.status(404).json({ error: 'Course not found' });
-                }
-
-                const course = {
-                    courseId: results[0].courseId,
-                    name: results[0].name,
-                    description: results[0].description,
-                    urls: results.map(row => ({ urlId: row.urlListId, url: row.url }))
-                };
-
-                res.status(200).json(course);
+                console.error(error, 'Internal Server Error inside query');
+                return res.status(500).json({ error: 'Internal Server Error' });
             }
+
+            // Check if the course is found
+            if (results.length === 0) {
+                return res.status(404).json({ error: 'Course not found' });
+            }
+
+            // Format the course details and send as JSON response
+            const course = {
+                courseId: results[0].courseId,
+                name: results[0].name,
+                description: results[0].description,
+                urls: results.map(row => ({ urlId: row.urlListId, url: row.url }))
+            };
+
+            res.status(200).json(course);
         });
     } catch (err) {
         console.error('Error in getCourseById:', err);
@@ -120,8 +135,10 @@ const getCourseById = (req, res) => {
     }
 };
 
+
 const updateCourseById = (req, res) => {
     try {
+        const teacherId = req.params.teacherId;
         const courseId = req.params.courseId;
         const { name, description } = req.body;
 
@@ -138,27 +155,38 @@ const updateCourseById = (req, res) => {
             updateValues.push(description);
         }
 
-        const updateQuery = `UPDATE courses SET ${updateFields.join(', ')} WHERE id = ?`;
-        const values = [...updateValues, courseId];
+        // Construct the SQL update query
+        const updateQuery = `UPDATE courses SET ${updateFields.join(', ')} WHERE id = ? AND teacherId = ?`;
+        const values = [...updateValues, courseId, teacherId];
 
+        // Execute the update query
         db.query(updateQuery, values, (error, results) => {
             if (error) {
                 console.error(error, 'Internal Server Error inside update query');
                 return res.status(500).json({ error: 'Internal Server Error' });
             }
 
+            // Check if the course was found and updated
             if (results.affectedRows === 0) {
-                return res.status(404).json({ error: 'Course not found' });
+                return res.status(404).json({ error: 'Course not found or you do not have required permissions' });
             }
 
-            const updatedFields = {};
-            updateFields.forEach((field, index) => {
-                updatedFields[field.split(' ')[0]] = updateValues[index];
-            });
+            // Retrieve the updated course details
+            const selectQuery = `SELECT * FROM courses WHERE id = ?`;
+            db.query(selectQuery, [courseId], (error, results) => {
+                if (error) {
+                    console.error(error, 'Internal Server Error inside select query');
+                    return res.status(500).json({ error: 'Internal Server Error' });
+                }
 
-            res.json({
-                message: 'Course details updated successfully',
-                updatedFields
+                // Extract the updated course details
+                const updatedCourse = results[0];
+
+                // Send the updated course object in the response
+                res.json({
+                    message: 'Course details updated successfully',
+                    course: updatedCourse
+                });
             });
         });
     } catch (err) {
@@ -167,37 +195,95 @@ const updateCourseById = (req, res) => {
     }
 };
 
+
 const updateUrlById = (req, res) => {
     try {
-        const { url } = req.body;
-        const urlId = req.params.urlId;
+        const { urls } = req.body;
 
-        // Check if both urlId and url are provided
-        if (!url) {
-            return res.status(400).json({ error: 'URL is required' });
+        // Check if urls array is provided
+        if (!urls || !Array.isArray(urls)) {
+            return res.status(400).json({ error: 'Invalid URLs payload' });
         }
 
-        // Update the URL in the database
-        const updateQuery = `UPDATE urlList SET url = ? WHERE id = ?`;
-        const values = [url, urlId];
+        // Loop through each URL object in the array and update/delete the URL in the database
+        const updatePromises = urls.map(urlObj => {
+            return new Promise((resolve, reject) => {
+                const { id, action } = urlObj;
 
-        db.query(updateQuery, values, (error, results) => {
-            if (error) {
-                console.error(error, 'Internal Server Error inside update URL query');
-                return res.status(500).json({ error: 'Internal Server Error' });
-            }
+                // Check if id and action are provided for each URL object
+                if (!id || !action || (action !== 'update' && action !== 'delete')) {
+                    reject({ error: 'URL ID and action (update/delete) are required for each URL object' });
+                    return;
+                }
 
-            if (results.affectedRows === 0) {
-                return res.status(404).json({ error: 'URL not found' });
-            }
+                // If action is 'update', update the URL in the database
+                if (action === 'update') {
+                    const { value } = urlObj;
 
-            res.json({ message: 'URL updated successfully' });
+                    // Check if value is provided for updating
+                    if (!value) {
+                        reject({ error: 'Value is required for updating the URL' });
+                        return;
+                    }
+
+                    const updateQuery = `UPDATE urlList SET url = ? WHERE id = ?`;
+                    const values = [value, id];
+
+                    db.query(updateQuery, values, (error, results) => {
+                        if (error) {
+                            reject({ error: 'Internal Server Error inside update URL query' });
+                            return;
+                        }
+
+                        if (results.affectedRows === 0) {
+                            reject({ error: 'URL not found' });
+                            return;
+                        }
+
+                        resolve();
+                    });
+                } else if (action === 'delete') {
+                    // Soft delete the URL
+                    const softDeleteQuery = `UPDATE urlList SET deletedAt = CURRENT_TIMESTAMP() WHERE id = ?`;
+                    db.query(softDeleteQuery, [id], (error, results) => {
+                        if (error) {
+                            reject({ error: 'Internal Server Error inside soft delete URL query' });
+                            return;
+                        }
+
+                        if (results.affectedRows === 0) {
+                            reject({ error: 'URL not found' });
+                            return;
+                        }
+
+                        resolve();
+                    });
+                }
+            });
         });
+
+        // Execute all update/delete promises concurrently
+        Promise.all(updatePromises)
+            .then(() => {
+                // Check if any URL was updated (if any promise resolves)
+                const isUpdate = urls.some(urlObj => urlObj.action === 'update');
+
+                // Determine the message based on the action
+                const message = isUpdate ? 'URLs updated successfully' : 'URLs deleted successfully';
+
+                // Send the appropriate message in the response
+                res.json({ message });
+            })
+            .catch(error => {
+                console.error('Error updating/deleting URLs:', error);
+                res.status(500).json({ error: 'Failed to update/delete URLs' });
+            });
     } catch (err) {
         console.error('Internal server error about URL query', err);
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+
 
 
 const softDeleteCourseById = (req, res) => {
