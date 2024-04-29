@@ -3,8 +3,8 @@ const router = express.Router();
 const userController = require('../../controllers/users/courses');
 const { verifyToken, authorizeUser } = require('../../middleware/auth');
 
+router.get('/teacher/:teacherId/allCourses', verifyToken, authorizeUser, userController.getAllTeacherCourses);
 
-router.get('/getAllCourses', verifyToken, authorizeUser, userController.getAllCourses);
-router.get('/getCourse/:courseId', verifyToken, authorizeUser, userController.getCourseById);
+router.get('/teacher/:teacherId/course/:courseId/user', verifyToken, authorizeUser, userController.getcourse);
 
 module.exports = router;

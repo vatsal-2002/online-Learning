@@ -3,13 +3,10 @@ const router = express.Router();
 const userController = require('../../controllers/users/assignments');
 const { verifyToken, authorizeUser } = require('../../middleware/auth');
 
-// Get all assignments
-router.get('/getAllAssignments', verifyToken, authorizeUser, userController.getAllAssignments);
+router.get('/teacher/:teacherId/assignments', verifyToken, authorizeUser, userController.getAllTeacherAssignments);
 
-// Get assignment by ID
-router.get('/getAssignment/:assignmentId', verifyToken, authorizeUser, userController.getAssignmentById);
+router.get('/teacher/:teacherId/assignment/:assignmentId', verifyToken, authorizeUser, userController.getTeacherAssignmentById);
 
-// Submit assignment detail
-router.post('/submitAssignment', verifyToken, authorizeUser, userController.submitAssignment);
+router.post('/teacher/:teacherId/assignment', verifyToken, authorizeUser, userController.submitAssignment);
 
 module.exports = router;

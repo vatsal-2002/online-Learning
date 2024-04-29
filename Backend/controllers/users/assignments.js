@@ -1,62 +1,100 @@
 const db = require('../../config/db');
 
-const getAllAssignments = (req, res) => {
+function calculateScore(submittedAnswer, storedAnswer) {
+    const maxLength = Math.max(submittedAnswer.length, storedAnswer.length);
+    let matchingCharacters = 0;
+
+    for (let i = 0; i < maxLength; i++) {
+        if (submittedAnswer[i] && storedAnswer[i] && submittedAnswer[i] === storedAnswer[i]) {
+            matchingCharacters++;
+        }
+    }
+
+    const percentageMatch = (matchingCharacters / maxLength) * 100;
+
+    // Define score ranges as per specified criteria
+    if (percentageMatch === 100) {
+        return 2;
+    } else if (percentageMatch >= 90) {
+        return 1.8;
+    } else if (percentageMatch >= 80) {
+        return 1.6;
+    } else if (percentageMatch >= 70) {
+        return 1.4;
+    } else if (percentageMatch >= 60) {
+        return 1.2;
+    } else if (percentageMatch >= 50) {
+        return 1;
+    } else if (percentageMatch >= 40) {
+        return 0.8;
+    } else if (percentageMatch >= 30) {
+        return 0.6;
+    } else if (percentageMatch >= 20) {
+        return 0.4;
+    } else if (percentageMatch >= 10) {
+        return 0.2;
+    } else if (percentageMatch > 0) {
+        return 0.1;
+    } else {
+        return 0; // Default score for unmatched answers
+    }
+}
+
+const getAllTeacherAssignments = (req, res) => {
     try {
+        const teacherId = req.params.teacherId;
+
         const selectQuery = `
-            SELECT a.id AS assignmentId, a.teacherId, a.name, a.startDate, a.endDate, al.id AS assignmentListId, al.question, al.answer
+            SELECT a.name, a.startDate, a.endDate, al.question
             FROM assignments a
             LEFT JOIN assignment_list al ON a.id = al.assId
-            WHERE a.deletedAt IS NULL
+            WHERE a.teacherId = ? AND a.deletedAt IS NULL
         `;
 
-        db.query(selectQuery, (error, results) => {
+        db.query(selectQuery, [teacherId], (error, results) => {
             if (error) {
-                console.log(error, 'Internal Server Error inside query');
+                console.error(error, 'Internal Server Error inside query');
                 return res.status(500).json({ error: 'Internal Server Error' });
             } else {
                 const assignments = results.reduce((acc, assignment) => {
-                    const existingAssignment = acc.find(item => item.assignmentId === assignment.assignmentId);
+                    const existingAssignment = acc.find(item => item.name === assignment.name);
                     if (!existingAssignment) {
                         acc.push({
-                            assignmentId: assignment.assignmentId,
-                            teacherId: assignment.teacherId,
                             name: assignment.name,
                             startDate: assignment.startDate,
                             endDate: assignment.endDate,
-                            questions: []
+                            questions: [assignment.question]
                         });
+                    } else {
+                        existingAssignment.questions.push(assignment.question);
                     }
-                    const assignmentIndex = acc.findIndex(item => item.assignmentId === assignment.assignmentId);
-                    acc[assignmentIndex].questions.push({
-                        assignmentListId: assignment.assignmentListId,
-                        question: assignment.question,
-                        answer: assignment.answer
-                    });
                     return acc;
                 }, []);
                 res.status(200).json(assignments);
             }
         });
     } catch (err) {
-        console.error('Error in getAllAssignments:', err);
+        console.error('Error in getAllTeacherAssignments:', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 
-const getAssignmentById = (req, res) => {
-    const assignmentId = req.params.assignmentId;
 
+
+const getTeacherAssignmentById = (req, res) => {
     try {
+        const { teacherId, assignmentId } = req.params;
+
         const selectQuery = `
-            SELECT a.id AS assignmentId, a.teacherId, a.name, a.startDate, a.endDate, al.id AS assignmentListId, al.question, al.answer
+            SELECT a.name, a.startDate, a.endDate, al.question
             FROM assignments a
             LEFT JOIN assignment_list al ON a.id = al.assId
-            WHERE a.id = ? AND a.deletedAt IS NULL
+            WHERE a.id = ? AND a.teacherId = ? AND a.deletedAt IS NULL
         `;
 
-        db.query(selectQuery, [assignmentId], (error, results) => {
+        db.query(selectQuery, [assignmentId, teacherId], (error, results) => {
             if (error) {
-                console.log(error, 'Internal Server Error inside query');
+                console.error(error, 'Internal Server Error inside query');
                 return res.status(500).json({ error: 'Internal Server Error' });
             } else {
                 if (results.length === 0) {
@@ -64,15 +102,11 @@ const getAssignmentById = (req, res) => {
                 }
 
                 const assignment = {
-                    assignmentId: results[0].assignmentId,
-                    teacherId: results[0].teacherId,
                     name: results[0].name,
                     startDate: results[0].startDate,
                     endDate: results[0].endDate,
                     questions: results.map(result => ({
-                        assignmentListId: result.assignmentListId,
-                        question: result.question,
-                        answer: result.answer
+                        question: result.question
                     }))
                 };
 
@@ -80,7 +114,7 @@ const getAssignmentById = (req, res) => {
             }
         });
     } catch (err) {
-        console.error('Error in getAssignmentById:', err);
+        console.error('Error in getTeacherAssignmentById:', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -92,47 +126,6 @@ const submitAssignment = (req, res) => {
     const submissionDate = new Date().toISOString().split('T')[0]; // Current date
 
     try {
-        // Function to calculate score based on matching characters
-        function calculateScore(submittedAnswer, storedAnswer) {
-            const maxLength = Math.max(submittedAnswer.length, storedAnswer.length);
-            let matchingCharacters = 0;
-
-            for (let i = 0; i < maxLength; i++) {
-                if (submittedAnswer[i] && storedAnswer[i] && submittedAnswer[i] === storedAnswer[i]) {
-                    matchingCharacters++;
-                }
-            }
-
-            const percentageMatch = (matchingCharacters / maxLength) * 100;
-
-            // Define score ranges as per specified criteria
-            if (percentageMatch === 100) {
-                return 2;
-            } else if (percentageMatch >= 90) {
-                return 1.8;
-            } else if (percentageMatch >= 80) {
-                return 1.6;
-            } else if (percentageMatch >= 70) {
-                return 1.4;
-            } else if (percentageMatch >= 60) {
-                return 1.2;
-            } else if (percentageMatch >= 50) {
-                return 1;
-            } else if (percentageMatch >= 40) {
-                return 0.8;
-            } else if (percentageMatch >= 30) {
-                return 0.6;
-            } else if (percentageMatch >= 20) {
-                return 0.4;
-            } else if (percentageMatch >= 10) {
-                return 0.2;
-            } else if (percentageMatch > 0) {
-                return 0.1;
-            } else {
-                return 0; // Default score for unmatched answers
-            }
-        }
-
         // Retrieve stored answers from the database based on assignmentListIds
         const selectQuery = `SELECT answer FROM assignment_list WHERE id IN (?)`;
         db.query(selectQuery, [assignmentListIds], (error, results) => {
@@ -172,10 +165,8 @@ const submitAssignment = (req, res) => {
     }
 };
 
-
-
 module.exports = {
-    getAllAssignments,
-    getAssignmentById,
+    getAllTeacherAssignments,
+    getTeacherAssignmentById,
     submitAssignment
 };

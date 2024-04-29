@@ -1,18 +1,50 @@
 const db = require('../../config/db');
 
-const getAllCourses = (req, res) => {
+// const getAllCourses = (req, res) => {
+//     try {
+//         const selectQuery = `
+//             SELECT c.id AS courseId, c.name, c.description, GROUP_CONCAT(u.url) AS urls
+//             FROM courses c
+//             LEFT JOIN urlList u ON c.id = u.courseId
+//             WHERE c.deletedAt IS NULL
+//             GROUP BY c.id
+//         `;
+
+//         db.query(selectQuery, (error, results) => {
+//             if (error) {
+//                 console.log(error, 'Internal Server Error inside query');
+//                 return res.status(500).json({ error: 'Internal Server Error' });
+//             } else {
+//                 const courses = results.map(course => ({
+//                     courseId: course.courseId,
+//                     name: course.name,
+//                     description: course.description,
+//                     url: course.urls ? course.urls.split(',') : []
+//                 }));
+//                 res.status(200).json(courses);
+//             }
+//         });
+//     } catch (err) {
+//         console.error('Error in getAllCourses:', err);
+//         res.status(500).json({ error: 'Internal Server Error' });
+//     }
+// };
+
+const getAllTeacherCourses = (req, res) => {
     try {
+        const teacherId = req.params.teacherId;
+
         const selectQuery = `
             SELECT c.id AS courseId, c.name, c.description, GROUP_CONCAT(u.url) AS urls
             FROM courses c
             LEFT JOIN urlList u ON c.id = u.courseId
-            WHERE c.deletedAt IS NULL
+            WHERE c.teacherId = ? AND c.deletedAt IS NULL
             GROUP BY c.id
         `;
 
-        db.query(selectQuery, (error, results) => {
+        db.query(selectQuery, [teacherId], (error, results) => {
             if (error) {
-                console.log(error, 'Internal Server Error inside query');
+                console.error(error, 'Internal Server Error inside query');
                 return res.status(500).json({ error: 'Internal Server Error' });
             } else {
                 const courses = results.map(course => ({
@@ -25,27 +57,28 @@ const getAllCourses = (req, res) => {
             }
         });
     } catch (err) {
-        console.error('Error in getAllCourses:', err);
+        console.error('Error in getAllTeacherCourses:', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 
-const getCourseById = (req, res) => {
+
+const getcourse = (req, res) => {
     try {
-        const courseId = req.params.courseId;
+        const { teacherId, courseId } = req.params;
         const userId = req.user.id;
 
         const selectQuery = `
             SELECT c.id AS courseId, c.name, c.description, GROUP_CONCAT(u.url) AS urls
             FROM courses c
             LEFT JOIN urlList u ON c.id = u.courseId
-            WHERE c.id = ? AND c.deletedAt IS NULL
+            WHERE c.id = ? AND c.teacherId = ? AND c.deletedAt IS NULL
             GROUP BY c.id
         `;
 
-        db.query(selectQuery, [courseId], (error, results) => {
+        db.query(selectQuery, [courseId, teacherId], (error, results) => {
             if (error) {
-                console.log(error, 'Internal Server Error inside query');
+                console.error(error, 'Internal Server Error inside query');
                 return res.status(500).json({ error: 'Internal Server Error' });
             } else {
                 if (results.length === 0) {
@@ -73,14 +106,13 @@ const getCourseById = (req, res) => {
             }
         });
     } catch (err) {
-        console.error('Error in getCourseById:', err);
+        console.error('Error in getUserCourseByTeacherAndCourseId:', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 
 
-
 module.exports = {
-    getAllCourses,
-    getCourseById
+    getAllTeacherCourses,
+    getcourse
 };

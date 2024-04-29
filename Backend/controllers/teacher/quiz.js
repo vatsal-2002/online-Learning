@@ -2,10 +2,11 @@ const db = require('../../config/db');
 
 const postQuiz = (req, res) => {
     const { name, startTime, endTime, questions } = req.body;
-    const teacherId = req.user.id;
+    const teacherId = req.params.teacherId;
+    const courseId = req.params.courseId;
 
     try {
-        db.query(`INSERT INTO quizs (teacherId, name, startTime, endTime) VALUES (?, ?, ?, ?)`, [teacherId, name, startTime, endTime], (err, results) => {
+        db.query(`INSERT INTO quizs (teacherId, courseId, name, startTime, endTime) VALUES (?, ?, ?, ?, ?)`, [teacherId, courseId, name, startTime, endTime], (err, results) => {
             if (err) {
                 console.error('Error creating a quiz', err);
                 return res.status(500).json({ error: 'Failed to create quiz' });
@@ -42,18 +43,19 @@ const postQuiz = (req, res) => {
     }
 };
 
+
 const getTeacherQuizzes = (req, res) => {
-    const teacherId = req.user.id; // Assuming user object contains teacher id after authentication
+    const { teacherId, courseId } = req.params;
 
     try {
         const selectQuery = `
             SELECT q.id AS quizId, q.name AS quizName, q.startTime, q.endTime, ql.id AS questionId, ql.question, ql.options, ql.answer, ql.correct_answer
             FROM quizs q
             INNER JOIN quiz_list ql ON q.id = ql.quizId
-            WHERE q.teacherId = ?
+            WHERE q.teacherId = ? AND q.courseId = ?
         `;
 
-        db.query(selectQuery, [teacherId], (error, results) => {
+        db.query(selectQuery, [teacherId, courseId], (error, results) => {
             if (error) {
                 console.error('Error fetching teacher quizzes:', error);
                 return res.status(500).json({ error: 'Internal Server Error' });
@@ -86,18 +88,19 @@ const getTeacherQuizzes = (req, res) => {
     }
 };
 
+
 const getQuizById = (req, res) => {
-    const quizId = req.params.quizId;
+    const { teacherId, courseId, quizId } = req.params;
 
     try {
         const selectQuery = `
             SELECT q.id AS quizId, q.name AS quizName, q.startTime, q.endTime, ql.id AS questionId, ql.question, ql.options, ql.answer, ql.correct_answer
             FROM quizs q
             INNER JOIN quiz_list ql ON q.id = ql.quizId
-            WHERE q.id = ?
+            WHERE q.id = ? AND q.teacherId = ? AND q.courseId = ?
         `;
 
-        db.query(selectQuery, [quizId], (error, results) => {
+        db.query(selectQuery, [quizId, teacherId, courseId], (error, results) => {
             if (error) {
                 console.error('Error fetching quiz by ID:', error);
                 return res.status(500).json({ error: 'Internal Server Error' });
@@ -180,54 +183,95 @@ const updateQuizById = (req, res) => {
 
 const updateQuizListItemById = (req, res) => {
     try {
-        const quizListId = req.params.quizListId;
-        const { question, options, answer, correct_answer } = req.body;
+        const { teacherId, courseId, quizId } = req.params;
+        const { quiz } = req.body;
 
-        const updateFields = [];
-        const updateValues = [];
-
-        if (question) {
-            updateFields.push('question = ?');
-            updateValues.push(question);
+        if (!Array.isArray(quiz)) {
+            return res.status(400).json({ error: 'Invalid quiz payload' });
         }
 
-        if (options) {
-            updateFields.push('options = ?');
-            updateValues.push(options);
-        }
+        const updatePromises = quiz.map(item => {
+            return new Promise((resolve, reject) => {
+                const { id, question, options, answer, correct_answer, action } = item;
 
-        if (answer) {
-            updateFields.push('answer = ?');
-            updateValues.push(answer);
-        }
+                if (action === 'delete') {
+                    // Soft delete the quiz list item
+                    const softDeleteQuery = `UPDATE quiz_list SET deletedAt = CURRENT_TIMESTAMP() WHERE id = ? AND quizId = ?`;
+                    db.query(softDeleteQuery, [id, quizId], (error, results) => {
+                        if (error) {
+                            console.error(error, 'Internal Server Error inside soft delete query');
+                            reject({ error: 'Internal Server Error' });
+                            return;
+                        }
 
-        if (correct_answer) {
-            updateFields.push('correct_answer = ?');
-            updateValues.push(correct_answer);
-        }
+                        if (results.affectedRows === 0) {
+                            reject({ error: 'Quiz list item not found' });
+                            return;
+                        }
 
-        const updateQuery = `UPDATE quiz_list SET ${updateFields.join(', ')} WHERE id = ?`;
-        const values = [...updateValues, quizListId];
+                        resolve({ message: 'Quiz list items deleted successfully' });
+                    });
+                } else {
+                    // Update the quiz list item
+                    const updateFields = [];
+                    const updateValues = [];
 
-        db.query(updateQuery, values, (error, results) => {
-            if (error) {
-                console.error(error, 'Internal Server Error inside update query');
-                return res.status(500).json({ error: 'Internal Server Error' });
-            }
+                    if (question) {
+                        updateFields.push('question = ?');
+                        updateValues.push(question);
+                    }
 
-            if (results.affectedRows === 0) {
-                return res.status(404).json({ error: 'Quiz list item not found' });
-            }
+                    if (options) {
+                        updateFields.push('options = ?');
+                        updateValues.push(JSON.stringify(options));
+                    }
 
-            res.json({
-                message: 'Quiz list item updated successfully'
+                    if (answer) {
+                        updateFields.push('answer = ?');
+                        updateValues.push(answer);
+                    }
+
+                    if (correct_answer) {
+                        updateFields.push('correct_answer = ?');
+                        updateValues.push(correct_answer);
+                    }
+
+                    const updateQuery = `UPDATE quiz_list SET ${updateFields.join(', ')} WHERE id = ? AND quizId = ?`;
+                    const values = [...updateValues, id, quizId];
+
+                    db.query(updateQuery, values, (error, results) => {
+                        if (error) {
+                            console.error(error, 'Internal Server Error inside update query');
+                            reject({ error: 'Internal Server Error' });
+                            return;
+                        }
+
+                        if (results.affectedRows === 0) {
+                            reject({ error: 'Quiz list item not found' });
+                            return;
+                        }
+
+                        resolve({ message: 'Quiz list item updated successfully' });
+                    });
+                }
             });
         });
+
+        // Execute all update/delete promises concurrently
+        Promise.all(updatePromises)
+            .then(messages => {
+                res.json({ messages });
+            })
+            .catch(error => {
+                console.error('Error updating/deleting quiz list items:', error);
+                res.status(500).json({ error: 'Failed to update/delete quiz list items' });
+            });
     } catch (err) {
-        console.error('Internal server error about query', err);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        console.error('Internal server error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+
 
 const deleteQuizAndItemsById = (req, res) => {
     try {
@@ -286,13 +330,16 @@ const deleteQuizAndItemsById = (req, res) => {
 
 const getAllUserQuizzes = (req, res) => {
     try {
+        const { teacherId, courseId, quizId } = req.params;
+
         const selectQuery = `
             SELECT uq.id, uq.userId, uq.quizId, uq.answer, uq.submissionDate, uq.score, u.firstname, u.lastname, u.email
             FROM users_quiz uq
             INNER JOIN users u ON uq.userId = u.id
+            WHERE uq.quizId = ?;
         `;
 
-        db.query(selectQuery, (error, results) => {
+        db.query(selectQuery, [quizId], (error, results) => {
             if (error) {
                 console.error('Error fetching user quizzes:', error);
                 return res.status(500).json({ error: 'Internal Server Error' });
@@ -305,7 +352,6 @@ const getAllUserQuizzes = (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
-
 
 module.exports = {
     postQuiz,

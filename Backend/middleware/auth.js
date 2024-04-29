@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
 
-// Middleware to verify JWT token and check user type
 const verifyToken = (req, res, next) => {
     const token = req.headers['authorization'];
 

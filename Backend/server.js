@@ -29,11 +29,11 @@ app.use(express.json());
 app.use('', signup);
 app.use('', login);
 app.use('', teachercourse);
-app.use('/course', teacherassignment);
-app.use('/course', teacherquiz);
-app.use('/courses', UsersAssignment);
-app.use('/courses', Userscourse);
-app.use('/courses', UsersQuiz);
+app.use('', teacherassignment);
+app.use('', teacherquiz);
+app.use('', UsersAssignment);
+app.use('', Userscourse);
+app.use('', UsersQuiz);
 
 const PORT = 8000;
 app.listen(PORT, () => {
